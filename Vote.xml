@@ -8,7 +8,9 @@
         <log expr="'disconnected'"/>
         <exit/>
     </catch>
-<data name="return_data" src="https://radiomali.herokuapp.com/vote.xml"/>
+<!--for example    -->
+<!--<data name="return_data" src="https://radiomali.herokuapp.com/vote.xml"/>-->
+<data name="return_data" src=""/>
     <form>
         <block>
 

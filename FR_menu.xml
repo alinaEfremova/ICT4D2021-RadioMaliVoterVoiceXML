@@ -8,6 +8,12 @@
 <!--variable for radio identification    -->
 <var name="radioID" />
 
+<!--variable for server adress    -->
+<!--for example:    -->
+<!--<var name="serverLink" expr="'https://radiomali.herokuapp.com/'"/>    -->
+<var name="serverLink" expr="''"/>
+
+
 
 <!--form for determining radio station-->
 <form id="auth">
@@ -33,14 +39,14 @@
      Dites oui ou non.
   </help>
   <error>
-      Radio Mali Voter n'est pas disponible actuellement - veuillez contacter l'administrateur.
+      Un problème est survenu à Radio Mali Voter. Essayez plus tard ou contactez l'administrateur.
       <exit/>
   </error>
   <filled>
     <if cond="confirm">
 <!--  sending code to server for checking  -->
       <data name="authdata"
-            src="https://radiomali.herokuapp.com/get_code"
+            srcexpr="serverLink + 'get_code'"
             method="GET" namelist="authCode"/>
 <!--  server answer example-->
 <!--  <?xml version="1.0"?>-->
@@ -59,6 +65,7 @@
         <goto next="#mainmenu"/>
       </if>
     <else/>
+      <clear namelist="authCode confirm"/>
       <goto next="#auth"/>
     </if>
   </filled>
@@ -97,7 +104,7 @@
      par exemple, deux deux oh quatre.
   </help>
   <error>
-      Radio Mali Voter n'est pas disponible actuellement -- veuillez contacter l'administrateur.
+      Un problème est survenu à Radio Mali Voter. Essayez plus tard ou contactez l'administrateur.
       <exit/>
   </error>
   <filled>
@@ -109,7 +116,7 @@
      <else/>
 <!--     send start date to server for checks -->
          <data name="polldata"
-               src="https://radiomali.herokuapp.com/check_datetime"
+               srcexpr="serverLink + 'check_datetime'"
                method="GET" namelist="start_date radioID"/>
 <!--     server answer example         -->
 <!--     <?xml version="1.0"?>-->
@@ -174,7 +181,7 @@
      par exemple, un cinq trois oh.
   </help>
   <error>
-      Radio Mali Voter n'est pas disponible actuellement - veuillez contacter l'administrateur.
+      Un problème est survenu à Radio Mali Voter. Essayez plus tard ou contactez l'administrateur.
       <exit/>
   </error>
   <filled>
@@ -207,7 +214,7 @@
      <else/>
 <!--     send start date and time to server for checks -->
          <data name="polldata"
-               src="https://radiomali.herokuapp.com/check_datetime"
+               srcexpr="serverLink + 'check_datetime'"
                method="GET" namelist="start_date start_time radioID"/>
          <var name="res" expr="polldata.documentElement"/>
 
@@ -256,7 +263,7 @@
      par exemple, deux deux oh quatre.
   </help>
   <error>
-      Radio Mali Voter n'est pas disponible actuellement - veuillez contacter l'administrateur.
+      Un problème est survenu à Radio Mali Voter. Essayez plus tard ou contactez l'administrateur.
       <exit/>
   </error>
   <filled>
@@ -268,7 +275,7 @@
      <else/>
 <!--     send start date, time and end date to server for checks -->
          <data name="polldata"
-               src="https://radiomali.herokuapp.com/check_datetime"
+               srcexpr="serverLink + 'check_datetime'"
                method="GET" namelist="start_date start_time end_date radioID"/>
          <var name="res" expr="polldata.documentElement"/>
 
@@ -313,7 +320,7 @@
      Dites ou entrez les chiffres de l'heure de départ, par exemple, un cinq trois oh.
   </help>
   <error>
-      Radio Mali Voter n'est pas disponible actuellement - veuillez contacter l'administrateur.
+      Un problème est survenu à Radio Mali Voter. Essayez plus tard ou contactez l'administrateur.
       <exit/>
   </error>
   <filled>
@@ -345,7 +352,7 @@
      <else/>
 <!--     send start date and time, end date and time to server for checks -->
          <data name="polldata"
-               src="https://radiomali.herokuapp.com/check_datetime"
+               srcexpr="serverLink + 'check_datetime'"
                method="GET"
                namelist="start_date start_time end_date end_time radioID"/>
          <var name="res" expr="polldata.documentElement"/>
@@ -402,7 +409,7 @@
      Dites oui ou non.
   </help>
   <error>
-      Radio Mali Voter n'est pas disponible actuellement - veuillez contacter l'administrateur.
+      Un problème est survenu à Radio Mali Voter. Essayez plus tard ou contactez l'administrateur.
       <exit/>
   </error>
   <filled>
@@ -411,7 +418,7 @@
 <!--if not, clear all variables, go to menu     -->
     <if cond="confirm">
       <data name="polldata"
-            src="https://radiomali.herokuapp.com/new_poll"
+            srcexpr="serverLink + 'new_poll'"
             method="GET"
             namelist="start_date start_time end_date end_time radioID"/>
 <!--  server answer example-->
@@ -440,12 +447,12 @@
 <!--form to announce results of the last conducted poll-->
 <form id="get_count">
     <error>
-      Radio Mali Voter n'est pas disponible actuellement - veuillez contacter l'administrateur.
+      Un problème est survenu à Radio Mali Voter. Essayez plus tard ou contactez l'administrateur.
       <exit/>
     </error>
     <block>
       <data name="countdata"
-            src="https://radiomali.herokuapp.com/get_count"
+            srcexpr="serverLink + 'get_count'"
             method="GET" namelist="radioID"/>
 <!--  server answer example-->
 <!--  <?xml version="1.0"?>-->
