@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vxml version="2.0" xmlns="http://www.w3.org/2001/vxml"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.w3.org/2001/vxml
+   http://www.w3.org/TR/voicexml20/vxml.xsd">
+
+     <catch event="connection.disconnect.hangup">
+        <log expr="'disconnected'"/>
+        <exit/>
+    </catch>
+<data name="return_data" src="https://radiomali.herokuapp.com/vote.xml"/>
+    <form>
+        <block>
+
+            <prompt>Get ready to disconnect!</prompt>
+            <disconnect/>
+         </block>
+    </form>
+</vxml>

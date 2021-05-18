@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vxml version="2.0" xmlns="http://www.w3.org/2001/vxml"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.w3.org/2001/vxml
+   http://www.w3.org/TR/voicexml20/vxml.xsd">
+
+<!--This menu is an entry point for the call -->
+<!--that allows to choose language for further interaction-->
+<menu>
+  <property name="language" value="dtmf"/>
+  <prompt>
+   For the English language, press 1
+    <!--audio below says 'for the french language press 2' in french-->
+    <break/><audio src="FR.wav"/>
+  </prompt>
+  <choice dtmf="1" next="EN_menu.xml"/>
+  <choice dtmf="2" next="FR_menu.xml"/>
+</menu>
+</vxml>

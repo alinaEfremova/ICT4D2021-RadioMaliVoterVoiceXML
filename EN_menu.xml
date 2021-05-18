@@ -1,0 +1,483 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<vxml version="2.0" xmlns="http://www.w3.org/2001/vxml" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xsi:schemaLocation="http://www.w3.org/2001/vxml 
+   http://www.w3.org/TR/voicexml20/vxml.xsd">
+
+<!--variable for radio identification    -->
+<var name="radioID" />
+
+
+<!--form for determining radio station-->
+<form id="auth">
+<field name="authCode" type="digits">
+   <prompt>
+     Say or key in the secret code for your radio station.
+     For example, two two oh seven.
+   </prompt>
+  <help>
+     Say or key in the secret code for your radio station,
+     for example, two two oh seven.
+  </help>
+</field>
+<field name="confirm" type="boolean">
+  <prompt>
+      Your code is <break/>
+      <say-as interpret-as="vxml:digits">
+          <value expr="authCode"/>
+      </say-as>,
+      Is this correct?
+  </prompt>
+  <help>
+     Say yes or no.
+  </help>
+  <error>
+      Radio Mali Voter is not available now -- please contact administrator.
+      <exit/>
+  </error>
+  <filled>
+    <if cond="confirm">
+<!--  sending code to server for checking  -->
+      <data name="authdata"
+            src="https://radiomali.herokuapp.com/get_code"
+            method="GET" namelist="authCode"/>
+<!--  server answer example-->
+<!--  <?xml version="1.0"?>-->
+<!--  <authdata>-->
+<!--  <radioStation>1</radioStation>-->
+<!--  </authdata>  -->
+      <assign name="radioID"
+              expr="authdata.documentElement.getElementsByTagName('radioStation').item(0).firstChild.data"/>
+
+<!--  server returns -1 in case of wrong radio code  -->
+      <if cond="radioID == -1">
+        <prompt>Sorry, it is not a valid code.</prompt>
+<!--    improvement: caller information can be sent to a server, to detect potential radio code's brute force  -->
+        <clear namelist="auth_code confirm"/>
+        <exit/>
+      <else/>
+        <goto next="#mainmenu"/>
+      </if>
+    <else/>
+      <goto next="#auth"/>
+    </if>
+  </filled>
+ </field>
+</form>
+
+
+<!--main menu of possible actions for caller    -->
+<menu id="mainmenu" dtmf="true">
+  <prompt>
+   <break/>
+   To set up a new poll, press 1.
+   To hear the last poll results, press 2<break/>
+   <!--audio below says 'to change language, press 3' in french-->
+   <audio src="changeLang3_FR.wav"/>
+  </prompt>
+  <choice dtmf="1" next="#get_datetimes"/>
+  <choice dtmf="2" next="#get_count"/>
+  <choice dtmf="3" next="language.xml"/>
+</menu>
+
+
+<!--form to set up a new poll -->
+<!--to create a poll caller is required to provide -->
+<!--start date and time, and end date and time-->
+<form id="get_datetimes">
+ <block>Let's set up start date and time for the poll.</block>
+ <field name="start_date" type="digits">
+   <prompt>
+     What date the poll should start?
+     Say or key in the digits. At first the day, then the month.
+     For example, two two oh four.
+   </prompt>
+  <help>
+     Say or key in the digits for start date,
+     for example, two two oh four.
+  </help>
+  <error>
+      Radio Mali Voter is not available now -- please contact administrator.
+      <exit/>
+  </error>
+  <filled>
+<!-- the date must have 3 (e.g. 106) or 4 digits (e.g. 1006)-->
+     <if cond="start_date.length &lt; 3 || start_date.length &gt; 4">
+       <clear namelist="start_date"/>
+       <prompt>The format is wrong, try again.</prompt>
+       <throw event="help"/>
+     <else/>
+<!--     send start date to server for checks -->
+         <data name="polldata"
+               src="https://radiomali.herokuapp.com/check_datetime"
+               method="GET" namelist="start_date radioID"/>
+<!--     server answer example         -->
+<!--     <?xml version="1.0"?>-->
+<!--     <polldata>-->
+<!--     <name>5</name>-->
+<!--     <startDate>OK</startDate>-->
+<!--     <startTime>DateTaken</startTime>-->
+<!--     <endDate>OK</endDate>-->
+<!--     <endTime>OK</endTime>-->
+<!--     </polldata>         -->
+         <var name="res" expr="polldata.documentElement"/>
+
+<!--     announcement if try to start poll in the past-->
+         <if cond="res.getElementsByTagName('startDate').item(0).firstChild.data == 'PastStart'">
+             <prompt>
+                 The date
+                 <say-as interpret-as="vxml:digits">
+                     <value expr="start_date"/>
+                 </say-as>
+                 is in the past. You can not create polls in the past.
+             </prompt>
+             <clear namelist="start_date"/>
+         </if>
+
+<!--     announcement if start date is not exist-->
+         <if cond="res.getElementsByTagName('startDate').item(0).firstChild.data == 'WrongFormat'">
+             <prompt>
+                 There is no such date as
+                 <say-as interpret-as="vxml:digits">
+                     <value expr="start_date"/>
+                 </say-as>.
+             </prompt>
+             <clear namelist="start_date"/>
+         </if>
+
+<!--     announcement if start date is already taken-->
+         <if cond="res.getElementsByTagName('startDate').item(0).firstChild.data == 'DateTaken'">
+             <prompt>
+                 The date
+                 <say-as interpret-as="vxml:digits">
+                     <value expr="start_date"/>
+                 </say-as>
+                 is taken by poll
+                 <value expr="res.getElementsByTagName('name').item(0).firstChild.data"/>.
+             </prompt>
+             <clear namelist="start_date"/>
+         </if>
+         <clear namelist="res"/>
+     </if>
+  </filled>
+ </field>
+
+ <block>What time do you want to start the poll? </block>
+ <field name="start_time" type="digits">
+   <prompt>
+     Say or key in the digits.
+     At first hours, then minutes.
+     For example, one five three oh.
+   </prompt>
+  <help>
+     Say or key in the digits for the start time,
+     for example, one five three oh.
+  </help>
+  <error>
+      Radio Mali Voter is not available now -- please contact administrator.
+      <exit/>
+  </error>
+  <filled>
+<!-- the time must have 3 (e.g. 830) or 4 digits (e.g. 1130)-->
+     <if cond="start_time.length &lt; 3 || start_time.length &gt; 4">
+       <prompt>The format is wrong, try again.</prompt>
+       <clear namelist="start_time"/>
+       <throw event="help"/>
+     <elseif cond="start_time.length == 3"/>
+       <var name="min"/>
+       <var name="hh"/>
+       <assign name="min" expr="start_time.substring(1,3)"/>
+       <assign name="hh" expr="start_time.substring(0,1)"/>
+     <else/>
+       <var name="min"/>
+       <var name="hh"/>
+       <assign name="min" expr="start_time.substring(2,4)"/>
+       <assign name="hh" expr="start_time.substring(0,2)"/>
+     </if>
+
+<!-- minutes must be between 00 and 59, hours between 00 and 23-->
+     <if cond="min == '' || min &gt; 59 || hh == '' || hh &gt; 23">
+       <prompt>
+           There is no such time as
+           <say-as interpret-as="vxml:digits">
+               <value expr="start_time"/>
+           </say-as>.
+       </prompt>
+       <clear namelist="start_time"/>
+     <else/>
+<!--     send start date and time to server for checks -->
+         <data name="polldata"
+               src="https://radiomali.herokuapp.com/check_datetime"
+               method="GET" namelist="start_date start_time radioID"/>
+         <var name="res" expr="polldata.documentElement"/>
+
+<!--     announcement if try to start poll in the past-->
+         <if cond="res.getElementsByTagName('startTime').item(0).firstChild.data == 'PastStart'">
+             <prompt>
+                 The current date and time
+                 <say-as interpret-as="vxml:digits">
+                     <value expr="start_time"/>
+                 </say-as>
+                 is in the past. You can not create polls in the past.
+             </prompt>
+             <clear namelist="start_time"/>
+         </if>
+
+<!--     announcement if start date and time are already taken-->
+         <if cond="res.getElementsByTagName('startTime').item(0).firstChild.data == 'DatetimeTaken'">
+             <prompt>
+                 The date
+                 <say-as interpret-as="vxml:digits">
+                     <value expr="start_date"/>
+                 </say-as>
+                 and time
+                 <say-as interpret-as="vxml:digits">
+                     <value expr="start_time"/>
+                 </say-as>
+                 are taken by poll
+                 <value expr="res.getElementsByTagName('name').item(0).firstChild.data"/>.
+             </prompt>
+             <clear namelist="start_time"/>
+         </if>
+         <clear namelist="res"/>
+     </if>
+  </filled>
+ </field>
+
+ <block>Now let's set up the end date and time for the poll.</block>
+ <field name="end_date" type="digits">
+   <prompt>
+     What date the poll should end?
+     Say or key in the digits. At first the day, then the month.
+     For example, two two oh four.
+   </prompt>
+  <help>
+     Say or key in the digits for the start date,
+     for example, two two oh four.
+  </help>
+  <error>
+      Radio Mali Voter is not available now -- please contact administrator.
+      <exit/>
+  </error>
+  <filled>
+<!-- the date must have 3 (e.g. 106) or 4 digits (e.g. 1006)-->
+     <if cond="end_date.length &lt; 3 || end_date.length &gt; 4">
+       <prompt>The format is wrong, try again.</prompt>
+       <throw event="help"/>
+       <clear namelist="end_date"/>
+     <else/>
+<!--     send start date, time and end date to server for checks -->
+         <data name="polldata"
+               src="https://radiomali.herokuapp.com/check_datetime"
+               method="GET" namelist="start_date start_time end_date radioID"/>
+         <var name="res" expr="polldata.documentElement"/>
+
+<!--     announcement if end date is not exist-->
+         <if cond="res.getElementsByTagName('endDate').item(0).firstChild.data == 'WrongFormat'">
+             <prompt>
+                 There is no such date as
+                 <say-as interpret-as="vxml:digits">
+                     <value expr="end_date"/>
+                 </say-as>.
+             </prompt>
+             <clear namelist="end_date"/>
+         </if>
+
+<!--     announcement if end date is before start date-->
+         <if cond="res.getElementsByTagName('endDate').item(0).firstChild.data == 'EndBeforeStart'">
+             <prompt>
+                 The end date
+                 <say-as interpret-as="vxml:digits">
+                     <value expr="end_date"/>
+                 </say-as>
+                 is earlier than the start date
+                 <say-as interpret-as="vxml:digits">
+                     <value expr="start_date"/>
+                 </say-as>.
+             </prompt>
+             <clear namelist="end_date"/>
+         </if>
+         <clear namelist="res"/>
+     </if>
+  </filled>
+ </field>
+
+ <block>What time do you want to end the poll? </block>
+ <field name="end_time" type="digits">
+   <prompt>
+     Say or key in the digits.
+     At first hours, then minutes.
+     For example, one five three oh.</prompt>
+  <help>
+     Say or key in the digits for thr start time,
+     for example, one five three oh.
+  </help>
+  <error>
+      Radio Mali Voter is not available now -- please contact administrator.
+      <exit/>
+  </error>
+  <filled>
+<!-- the time must have 3 (e.g. 830) or 4 digits (e.g. 1130)-->
+     <if cond="end_time.length &lt; 3 || end_time.length &gt; 4">
+       <prompt>The format is wrong, try again.</prompt>
+       <clear namelist="end_time"/>
+     <elseif cond="end_time.length == 3"/>
+       <var name="min"/>
+       <var name="hh"/>
+       <assign name="min" expr="end_time.substring(1,3)"/>
+       <assign name="hh" expr="end_time.substring(0,1)"/>
+     <else/>
+       <var name="min"/>
+       <var name="hh"/>
+       <assign name="min" expr="end_time.substring(2,4)"/>
+       <assign name="hh" expr="end_time.substring(0,2)"/>
+     </if>
+
+<!-- minutes must be between 00 and 59, hours between 00 and 23-->
+     <if cond="min == '' || min &gt; 59 || hh == '' || hh &gt; 23">
+       <prompt>
+           There is no such time as
+           <say-as interpret-as="vxml:digits">
+               <value expr="end_time"/>
+           </say-as>.
+       </prompt>
+       <clear namelist="end_time"/>
+     <else/>
+<!--     send start date and time, end date and time to server for checks -->
+         <data name="polldata"
+               src="https://radiomali.herokuapp.com/check_datetime"
+               method="GET"
+               namelist="start_date start_time end_date end_time radioID"/>
+         <var name="res" expr="polldata.documentElement"/>
+
+<!--     announcement if end datetime is before start datetime-->
+         <if cond="res.getElementsByTagName('endTime').item(0).firstChild.data == 'EndBeforeStart'">
+             <prompt>
+                 The end date and time
+                 <say-as interpret-as="vxml:digits">
+                     <value expr="end_time"/>
+                 </say-as>
+                 are earlier than the start date and time
+                 <say-as interpret-as="vxml:digits">
+                     <value expr="start_time"/>
+                 </say-as>.
+             </prompt>
+             <clear namelist="end_time"/>
+         </if>
+
+<!--     announcement if time slot is already taken-->
+         <if cond="res.getElementsByTagName('endTime').item(0).firstChild.data == 'DatetimeTaken'">
+             <prompt>
+                 These date and time are taken by poll
+                 <value expr="res.getElementsByTagName('name').item(0).firstChild.data"/>.
+             </prompt>
+             <clear namelist="end_time"/>
+         </if>
+         <clear namelist="res"/>
+     </if>
+  </filled>
+ </field>
+<!--ask to confirm poll creating with announced start and end    -->
+ <field name="confirm" type="boolean">
+  <prompt>
+      You want to create poll that will start on the date <break/>
+      <say-as interpret-as="vxml:digits">
+          <value expr="start_date"/>
+      </say-as>,
+      at the time <break/>
+      <say-as interpret-as="vxml:digits">
+          <value expr="start_time"/>
+      </say-as>.
+      And will end on the date <break/>
+      <say-as interpret-as="vxml:digits">
+          <value expr="end_date"/>
+      </say-as>,
+      at the time <break/>
+      <say-as interpret-as="vxml:digits">
+          <value expr="end_time"/>
+      </say-as>.
+      Is this correct?
+  </prompt>
+  <help>
+     Say yes or no.
+  </help>
+  <error>
+      Radio Mali Voter is not available now -- please contact administrator.
+      <exit/>
+  </error>
+  <filled>
+<!--if confirmed, request for creating poll is send, -->
+<!--name of the created poll is announced -->
+<!--if not, clear all variables, go to menu     -->
+    <if cond="confirm">
+      <data name="polldata"
+            src="https://radiomali.herokuapp.com/new_poll"
+            method="GET"
+            namelist="start_date start_time end_date end_time radioID"/>
+<!--  server answer example-->
+<!--  <?xml version="1.0"?>-->
+<!--  <polldata>-->
+<!--  <name>6</name>-->
+<!--  </polldata>        -->
+      <var name="res" expr="polldata.documentElement"/>
+      <prompt>
+          Poll with name <break/>
+          <value expr="res.getElementsByTagName('name').item(0).firstChild.data"/>
+          is created.<break/>
+      </prompt>
+      <clear namelist="start_date start_time end_date end_time confirm"/>
+      <goto next="#mainmenu"/>
+    <else/>
+      <prompt>Poll isn't created.<break/></prompt>
+      <clear namelist="start_date start_time end_date end_time confirm"/>
+      <goto next="#mainmenu"/>
+    </if>
+  </filled>
+ </field>
+</form>
+
+
+<!--form to announce results of the last conducted poll-->
+<form id="get_count">
+    <error>
+        Radio Mali Voter is not available now -- please contact administrator.
+        <exit/>
+    </error>
+    <block>
+      <data name="countdata"
+            src="https://radiomali.herokuapp.com/get_count"
+            method="GET" namelist="radioID"/>
+<!--  server answer example-->
+<!--  <?xml version="1.0"?>-->
+<!--  <countdata>-->
+<!--  <name>5</name>-->
+<!--  <count1>4</count1>-->
+<!--  <num1>9990066282</num1>-->
+<!--  <count2>1</count2>-->
+<!--  <num2>9990066283</num2>-->
+<!--  </countdata>-->
+      <var name="res" expr="countdata.documentElement"/>
+<!--  server returns -1 if no polls were conducted  -->
+      <if cond="res.getElementsByTagName('name').item(0).firstChild.data == -1">
+        <prompt>There are no conducted polls yet.</prompt>
+        <clear namelist="res countdata"/>
+        <goto next="#mainmenu"/>
+      <else/>
+          <prompt>
+          You will hear results for the poll
+          <value expr="res.getElementsByTagName('name').item(0).firstChild.data"/>.
+          There are <break/>
+          <value expr="res.getElementsByTagName('count1').item(0).firstChild.data"/> votes for
+          <say-as interpret-as="vxml:digits">
+              <value expr="res.getElementsByTagName('num1').item(0).firstChild.data"/>
+          </say-as>.
+          And <break/><value expr="res.getElementsByTagName('count2').item(0).firstChild.data"/> votes for
+          <say-as interpret-as="vxml:digits">
+              <value expr="res.getElementsByTagName('num2').item(0).firstChild.data"/>
+          </say-as>.<break/>
+          </prompt>
+      <goto next="#mainmenu"/>
+      </if>
+    </block>
+</form>
+</vxml>
